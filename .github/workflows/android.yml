@@ -53,6 +53,9 @@ jobs:
           cp app/build/outputs/bundle/release/*.aab "../out/Corvyn-${CORVYN_VERSION_NAME}.aab"
           cp app/build/outputs/apk/release/*.apk "../out/Corvyn-${CORVYN_VERSION_NAME}.apk"
           ls -la ../out
+          echo "www v AAB: $(unzip -l ../out/*.aab | grep -c 'assets/www/')"
+          $ANDROID_HOME/build-tools/36.0.0/aapt2 dump badging ../out/*.apk | head -4
+          if [ -n "$CORVYN_KEYSTORE_FILE" ]; then jarsigner -verify ../out/*.aab | tail -1; fi
       - uses: actions/upload-artifact@v4
         with:
           name: corvyn-android
