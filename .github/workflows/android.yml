@@ -55,7 +55,7 @@ jobs:
           ls -la ../out
           echo "www v AAB: $(unzip -l ../out/*.aab | grep -c 'assets/www/')"
           $ANDROID_HOME/build-tools/36.0.0/aapt2 dump badging ../out/*.apk | head -4
-          if [ -n "$CORVYN_KEYSTORE_FILE" ]; then jarsigner -verify ../out/*.aab | tail -1; fi
+          if [ -n "$CORVYN_KEYSTORE_FILE" ]; then jarsigner -verify ../out/*.aab | grep -m1 'verified'; $ANDROID_HOME/build-tools/36.0.0/apksigner verify --print-certs ../out/*.apk | grep -m2 'DN\|SHA-256'; fi
       - uses: actions/upload-artifact@v4
         with:
           name: corvyn-android
