@@ -7,7 +7,7 @@ android {
     compileSdk 36
     defaultConfig {
         applicationId 'cz.corvyn.game'
-        minSdk 23
+        minSdk 24
         targetSdk 36
         versionCode Integer.parseInt(System.getenv('CORVYN_VERSION_CODE') ?: '6')
         versionName System.getenv('CORVYN_VERSION_NAME') ?: '2.4'
