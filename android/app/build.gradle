@@ -1,0 +1,34 @@
+plugins { id 'com.android.application' }
+
+def ks = System.getenv('CORVYN_KEYSTORE_FILE')
+
+android {
+    namespace 'cz.corvyn.game'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'cz.corvyn.game'
+        minSdk 23
+        targetSdk 36
+        versionCode Integer.parseInt(System.getenv('CORVYN_VERSION_CODE') ?: '6')
+        versionName System.getenv('CORVYN_VERSION_NAME') ?: '2.4'
+    }
+    signingConfigs {
+        release {
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv('CORVYN_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('CORVYN_KEY_ALIAS') ?: 'corvyn'
+                keyPassword System.getenv('CORVYN_KEYSTORE_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (ks) signingConfig signingConfigs.release
+        }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    androidResources { noCompress += ['txt', 'glb', 'woff2', 'js', 'json', 'png'] }
+    lint { abortOnError false; checkReleaseBuilds false }
+}

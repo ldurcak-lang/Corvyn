@@ -1,0 +1,63 @@
+name: Android (Google Play)
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'Verze (např. 2.4)'
+        required: false
+        default: '2.4'
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Hra do aplikace
+        run: |
+          mkdir -p android/app/src/main/assets
+          rm -rf android/app/src/main/assets/www
+          cp -r site android/app/src/main/assets/www
+          rm -f android/app/src/main/assets/www/sw.js android/app/src/main/assets/www/.nojekyll
+      - name: Podpisový klíč
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE }}
+        run: |
+          if [ -n "$KS_B64" ]; then echo "$KS_B64" | tr -d ' \r\n' | base64 -d > "$RUNNER_TEMP/corvyn.jks"; echo "CORVYN_KEYSTORE_FILE=$RUNNER_TEMP/corvyn.jks" >> "$GITHUB_ENV"; else echo "::warning::Chybí secret ANDROID_KEYSTORE – sestavení nebude podepsané"; fi
+      - name: Sestavení AAB a APK
+        working-directory: android
+        env:
+          CORVYN_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          CORVYN_VERSION_CODE: ${{ github.run_number }}
+          CORVYN_VERSION_NAME: ${{ github.event.inputs.version_name || github.ref_name }}
+        run: |
+          export CORVYN_VERSION_CODE=$((100 + CORVYN_VERSION_CODE))
+          export CORVYN_VERSION_NAME="${CORVYN_VERSION_NAME#v}"
+          gradle --no-daemon bundleRelease assembleRelease
+          mkdir -p ../out
+          cp app/build/outputs/bundle/release/*.aab "../out/Corvyn-${CORVYN_VERSION_NAME}.aab"
+          cp app/build/outputs/apk/release/*.apk "../out/Corvyn-${CORVYN_VERSION_NAME}.apk"
+          ls -la ../out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: corvyn-android
+          path: out/*
+      - name: Vydání na GitHubu
+        if: env.CORVYN_KEYSTORE_FILE != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ github.ref_type == 'tag' && github.ref_name || format('v{0}-{1}', github.event.inputs.version_name, github.run_number) }}"
+          gh release create "$TAG" out/* --title "Corvyn $TAG" --notes "Soubor .aab nahraj do Google Play Console, .apk lze instalovat přímo." || gh release upload "$TAG" out/* --clobber
